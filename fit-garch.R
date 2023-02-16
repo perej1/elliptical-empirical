@@ -21,7 +21,7 @@ get_innovations <- function(spec, x) {
 car3pol <- function(x) {
   x <- unname(x)
   r <- norm(x, type = "2")
-  inc <- acos(x[3] / r)
+  inc <- asin(x[3] / r)
   azi <- sign(x[2]) * acos(x[1] / norm(x[1:2], type = "2"))
   c(radius = r, inclination = inc, azimuth = azi)
 }
@@ -48,7 +48,7 @@ stock <- read_csv("data/stock-price-raw.csv", col_names = TRUE) %>%
 
 # Calculate polar coordinates for innovations
 polar <- stock %>%
-  select(contains("innovation")) %>%
+  select(ends_with("innovation")) %>%
   pmap(., lift_vd(car3pol)) %>%
   transpose() %>%
   map(flatten_dbl) %>%
