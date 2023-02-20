@@ -4,6 +4,14 @@ library(purrr)
 library(ellipticalsymmetry)
 library(robustbase)
 
+#' Compute PE Test Statistic
+#'
+#' @param r Double vector. Sample from a distribution.
+#' @param eta Double. Free parameter, see (Hüsler and Li 2006) for details.
+#' @param m Integer. Discretization level in integration.
+#' @param k Integer. Number of tail observations.
+#'
+#' @return Double. Approximate test statistic.
 compute_test_stat_regvar <- function(r, eta = 0.5, m = 10000, k = 80) {
   n <- length(r)
   t <- seq(0, 1, length.out = m + 1)[-1]
@@ -13,6 +21,13 @@ compute_test_stat_regvar <- function(r, eta = 0.5, m = 10000, k = 80) {
   k * mean((d / gamma + log(t))^2 * t^eta)
 }
 
+#' Simulate Observation from Asymptotic Distribution of the PE Test Statistic
+#'
+#' @param eta Double. Free parameter, see (Hüsler and Li 2006) for details.
+#' @param m Integer. Discretization level in integration.
+#'
+#' @return Double. Approximate value for an observation from asymptotic
+#'  distribution 
 sim_asymp_test_stat_regvar <- function(eta = 0.5, m = 10000) {
   t <- seq(0, 1, length.out = m + 1)[-1]
   bm <- cumsum(rnorm(m, 0, sqrt(1 / m)))
@@ -21,6 +36,15 @@ sim_asymp_test_stat_regvar <- function(eta = 0.5, m = 10000) {
   mean(((1 / t) * bm_bridge + log(t) * integral_1)^2 * t^eta)
 }
 
+#' Computer P-Value for the PE test
+#'
+#' @param r Double vector. Sample from a distribution.
+#' @param eta Double. Free parameter, see (Hüsler and Li 2006) for details.
+#' @param m Integer. Discretization level in integration.
+#' @param k Integer. Number of tail observations.
+#' @param mm Integer. Sample size from asymptotic distribution.
+#'
+#' @return Double. Approximate p-value for the PE-test.
 test_regvar <- function(r, eta = 0.5, m = 10000, k = 80, mm  = 10000) {
   test_stat <- compute_test_stat_regvar(r, eta, m, k)
   fn <- ecdf(replicate(mm, sim_asymp_test_stat_regvar(eta, m)))
