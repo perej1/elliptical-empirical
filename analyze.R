@@ -4,6 +4,72 @@ library(purrr)
 library(ellipticalsymmetry)
 library(robustbase)
 
+
+#' Generate m equally spaced points from a circle
+#'
+#' @param m Integer, number of points.
+#'
+#' @return Double matrix of points, one row represents one point.
+get_ball_mesh <- function(m) {
+  w <- seq(0, 2 * pi, length.out = m)
+  cbind(cos(w), sin(w))
+}
+
+
+#' Compute square root of a positive definite matrix
+#'
+#' More precisely, function computes matrix lambda
+#' s.t. sigma = lambda %*% lambda.
+#'
+#' @param sigma Double matrix, positive definite matrix.
+#'
+#' @return Double matrix, square root of the matrix.
+sqrtmat <- function(sigma) {
+  eigenval <- eigen(sigma)$values
+  if (any(eigenval <= 0) || any(sigma != t(sigma))) {
+    rlang::abort("`sigma` must be a symmetric positive definite matrix.")
+  }
+  eigenvec <- eigen(sigma)$vectors
+  eigenvec %*% diag(eigenval^0.5) %*% t(eigenvec)
+}
+
+#' Estimate elliptical extreme quantile region
+#'
+#' Consistent for heavy-tailed elliptical distributions under some other
+#' technical assumptions.
+#'
+#' @param data Double matrix of observations, each row represents one
+#'   observation.
+#' @param mu_est Double vector, estimate of the location.
+#' @param sigma_est Double matrix, estimate of the scatter.
+#' @param p Double, probability in quantile region.
+#' @param k Integer, threshold for the sample from the tail.
+#' @param m Integer, number of points to return.
+#'
+#' @return Double matrix, m points from the boundary of the quantile region.
+elliptical_extreme_qregion <- function(data, mu_est, sigma_est, p, k, m) {
+  n <- nrow(data)
+  w <- get_ball_mesh(m)
+  
+  # Center data
+  data <- sweep(data, 2, mu_est, "-")
+  
+  # Approximate generating variate
+  radius <- sqrt(stats::mahalanobis(data, FALSE, sigma_est, inverted = FALSE))
+  radius_sort <- sort(radius, decreasing = FALSE)
+  
+  # Estimate extreme value index
+  gamma_est <- mean((log(radius_sort[(n - k):n]) - log(radius_sort[n - k]))[-1])
+  
+  # Estimate extreme quantile of generating variate
+  r_hat <- radius_sort[n - k] * (k / (n * p))^gamma_est
+  
+  # Estimate extreme quantile region
+  lambda <- sqrtmat(r_hat^2 * sigma_est)
+  sweep(w %*% t(lambda), 2, mu_est, "+")
+}
+
+
 #' Compute PE Test Statistic
 #'
 #' @param r Double vector. Sample from a distribution.
@@ -36,6 +102,7 @@ sim_asymp_test_stat_regvar <- function(eta = 0.5, m = 10000) {
   mean(((1 / t) * bm_bridge + log(t) * integral_1)^2 * t^eta)
 }
 
+
 #' Computer P-Value for the PE test
 #'
 #' @param r Double vector. Sample from a distribution.
@@ -50,6 +117,7 @@ test_regvar <- function(r, eta = 0.5, m = 10000, k = 80, mm  = 10000) {
   fn <- ecdf(replicate(mm, sim_asymp_test_stat_regvar(eta, m)))
   1 - fn(test_stat)
 }
+
 
 stock <- read_csv("data/stock-price-mod.csv", col_names = TRUE)
 
@@ -93,4 +161,5 @@ reg_test <- stock %>%
   select(contains("innovation")) %>%
   as.matrix %>%
   stats::mahalanobis(center = sigma$center, cov = sigma$cov) %>%
+  #sqrt() %>%
   test_regvar(eta = 0.5, m = 10000, k = 80, mm = 10000)
