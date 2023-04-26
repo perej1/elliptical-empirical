@@ -85,3 +85,11 @@ polar <- stock %>%
 # Write data
 bind_cols(stock, polar) %>%
   write_csv("data/stock-price-mod.csv")
+
+# Write EGARCH model parameters
+tibble(offset = map_dbl(fits, ~ coef(.)["mu"]),
+       sigma_pred = map_dbl(fits,
+                            ~ as.double(sigma(ugarchforecast(., n.ahead = 1)))),
+       country = map_chr(names(fits),
+                         ~ str_split(., "_", simplify = TRUE)[1])) %>%
+  write_csv("data/model-parameters.csv")
