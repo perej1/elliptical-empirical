@@ -1,10 +1,5 @@
-library(readr)
-library(dplyr)
-library(rugarch)
-library(rlang)
-library(stringr)
-library(glue)
-library(purrr)
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(rugarch))
 
 
 #' Compute Innovations corresponding to the Garch model
@@ -30,22 +25,9 @@ get_predictions <- function(fit, x) {
 }
 
 
-#' Three Dimensional Polar Coordinate from Cartesian Coordinate
-#'
-#' @param x Cartesian coordinate as a double vector
-#'
-#' @return Named vector of polar coordinates
-car3pol <- function(x) {
-  x <- unname(x)
-  r <- norm(x, type = "2")
-  inc <- asin(x[3] / r)
-  azi <- sign(x[2]) * acos(x[1] / norm(x[1:2], type = "2"))
-  c(radius = r, inclination = inc, azimuth = azi)
-}
-
-
 # Calculate daily returns
-stock <- read_csv("data/stock-price-raw.csv", col_names = TRUE) %>%
+stock <- readr::read_csv("data/stock-price-raw.csv", col_names = TRUE,
+                         col_types = readr::cols()) %>%
   rename(date = ...1,
          us = `US-SP500`,
          uk = `UK-FTSE100`,
@@ -74,22 +56,18 @@ for (country in c("us", "uk", "jpn")) {
            "{cols[3]}" := get_predictions(fits[[cols[1]]], get(cols[2])))
 }
 
-# Calculate polar coordinates for innovations
-polar <- stock %>%
-  select(ends_with("innovation")) %>%
-  pmap(., lift_vd(car3pol)) %>%
-  transpose() %>%
-  map(flatten_dbl) %>%
-  as_tibble()
-
 # Write data
-bind_cols(stock, polar) %>%
-  write_csv("data/stock-price-mod.csv")
+stock %>%
+  readr::write_csv("data/stock-price-mod.csv")
 
 # Write EGARCH model parameters
-tibble(offset = map_dbl(fits, ~ coef(.)["mu"]),
-       sigma_pred = map_dbl(fits,
-                            ~ as.double(sigma(ugarchforecast(., n.ahead = 1)))),
-       country = map_chr(names(fits),
-                         ~ str_split(., "_", simplify = TRUE)[1])) %>%
-  write_csv("data/model-parameters.csv")
+offset <- purrr::map_dbl(fits, ~ coef(.)["mu"])
+sigma_pred <- purrr::map_dbl(fits,
+                             ~ as.double(
+                               sigma(ugarchforecast(., n.ahead = 1))
+                               )
+                             )
+country <- purrr::map_chr(names(fits),
+                          ~ stringr::str_split(., "_", simplify = TRUE)[1])
+tibble(offset, sigma_pred, country) %>%
+  readr::write_csv("data/model-parameters.csv")
