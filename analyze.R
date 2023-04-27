@@ -162,7 +162,6 @@ innovations <- stock %>%
 
 mcd_est <- robustbase::covMcd(innovations, alpha = 0.5)
 
-k <- 200
 outliers <- purrr::map_dbl(p,
                            ~ elliptical_extreme_qregion(innovations,
                                                         mu_est = mcd_est$center,
@@ -176,7 +175,7 @@ outliers <- purrr::map_dbl(p,
                            mcd_est$cov) >= .^2) %>%
   purrr::map(~ stock$date[.])
 
-cli::cli_h2("Outliers for different levels of p when k = {k}")
+cli::cli_h3("Outliers for different levels of p when k = {k}")
 cli::cli_alert_info("p = {p['low']}: {length(outliers$low)} outlier{?s} found, {outliers$low}")
 cli::cli_alert_info("p = {p['medium']}: {length(outliers$medium)} outlier{?s} found, {outliers$medium}")
 cli::cli_alert_info("p = {p['high']}: {length(outliers$high)} outlier{?s} found, {outliers$high}")

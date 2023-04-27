@@ -100,10 +100,10 @@ reg_test <- stock %>%
 test_res <- tibble(ellipticity_test = ellipticity_test,
                    regular_variation_test = reg_test)
 
-cli::cli_h2("P-values of the the Ljung-Box test")
+cli::cli_h3("P-values of the the Ljung-Box test")
 box_test
 
-cli::cli_h2("P-values for the tests of ellipticity and regular variation")
+cli::cli_h3("P-values for the tests of ellipticity and regular variation")
 test_res
 
 # Save p-values
