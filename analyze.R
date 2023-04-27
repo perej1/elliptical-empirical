@@ -4,12 +4,27 @@ library(ggplot2)
 
 #' Generate m equally spaced points from a circle
 #'
-#' @param m Integer, number of points.
+#' @param m Integer. Number of points.
+#' @param d Integer. Dimensions of the ball.
 #'
 #' @return Double matrix of points, one row represents one point.
-get_ball_mesh <- function(m) {
-  w <- seq(0, 2 * pi, length.out = m)
-  cbind(cos(w), sin(w))
+get_ball_mesh <- function(m, d) {
+  if (d == 2) {
+    w <- seq(0, 2 * pi, length.out = m)
+    cbind(cos(w), sin(w))
+  } else if (d == 3) {
+    mm <- ceiling(sqrt(m))
+    w <- seq(0, 2 * pi, length.out = mm)
+    v <- seq(0, pi, length.out = mm)
+    x <- purrr::map(w, ~ sin(v) * cos(.)) %>%
+      purrr::list_c()
+    y <- purrr::map(w, ~ sin(v) * sin(.)) %>%
+      purrr::list_c()
+    z <- rep(cos(v), mm)
+    cbind(x, y, z)
+  } else {
+    rlang::abort("Dimensions `d` must be equal to two or three.")
+  }
 }
 
 
@@ -45,9 +60,9 @@ sqrtmat <- function(sigma) {
 #' @param m Integer, number of points to return.
 #'
 #' @return Double matrix, m points from the boundary of the quantile region.
-elliptical_extreme_qregion <- function(data, mu_est, sigma_est, p, k, m) {
+elliptical_extreme_qregion <- function(data, mu_est, sigma_est, p, k, m, d) {
   n <- nrow(data)
-  w <- get_ball_mesh(m)
+  w <- get_ball_mesh(m, d)
 
   # Center data
   data <- sweep(data, 2, mu_est, "-")
@@ -64,7 +79,8 @@ elliptical_extreme_qregion <- function(data, mu_est, sigma_est, p, k, m) {
 
   # Estimate extreme quantile region
   lambda <- sqrtmat(r_hat^2 * sigma_est)
-  sweep(w %*% t(lambda), 2, mu_est, "+")
+  data <- sweep(w %*% t(lambda), 2, mu_est, "+")
+  list(data = data, r_hat = r_hat)
 }
 
 
@@ -86,6 +102,7 @@ prediction_comb <- stock %>%
 # Compute predicted bivariate extreme quantile regions
 m <- 1000
 k <- 160
+d <- 2
 p <- c(low = 1 / 2000, medium = 1 / 5000, high = 1 / 10000)
 labels <- c(us = "S&P 500", uk = "FTSE 100", jpn = "Nikkei 225")
 
@@ -105,7 +122,7 @@ for (i in seq_along(innovation_comb)) {
   estimates <- purrr::map(p, ~ elliptical_extreme_qregion(innovation_comb[[i]],
                                                           mcd_est$center,
                                                           mcd_est$cov,
-                                                          ., k, m)) %>%
+                                                          ., k, m, d)$data) %>%
     purrr::map(~ sweep(. %*% t(sigma), 2, offset, "+")) %>%
     do.call(rbind, .) %>%
     as_tibble(.name_repair = "universal") %>%
@@ -118,7 +135,7 @@ for (i in seq_along(innovation_comb)) {
     geom_path(data = estimates,
               aes(x = x, y = y, group = group, linetype = group),
               show.legend = FALSE) +
-    coord_fixed() +
+    coord_fixed() + xlim(-0.07, 0.07) + ylim(-0.07, 0.07) +
     theme(axis.title = element_text(size = 15, face = "bold"),
           panel.background = element_blank(),
           axis.line = element_line(colour = "black"),
@@ -138,3 +155,28 @@ for (i in seq_along(innovation_comb)) {
                              ".jpg")
   ggsave(filename, plot = g, width = 7, height = 7, dpi = 1000)
 }
+
+# Outlier detection with three dimensional extreme quantile regions
+innovations <- stock %>%
+  select(ends_with("innovation"))
+
+mcd_est <- robustbase::covMcd(innovations, alpha = 0.5)
+
+k <- 200
+outliers <- purrr::map_dbl(p,
+                           ~ elliptical_extreme_qregion(innovations,
+                                                        mu_est = mcd_est$center,
+                                                        sigma_est = mcd_est$cov,
+                                                        .,
+                                                        k = k,
+                                                        m = 10000,
+                                                        d = 3)$r_hat) %>%
+  purrr::map(~ mahalanobis(innovations,
+                           mcd_est$center,
+                           mcd_est$cov) >= .^2) %>%
+  purrr::map(~ stock$date[.])
+
+cli::cli_h2("Outliers for different levels of p when k = {k}")
+cli::cli_alert_info("p = {p['low']}: {length(outliers$low)} outlier{?s} found, {outliers$low}")
+cli::cli_alert_info("p = {p['medium']}: {length(outliers$medium)} outlier{?s} found, {outliers$medium}")
+cli::cli_alert_info("p = {p['high']}: {length(outliers$high)} outlier{?s} found, {outliers$high}")
