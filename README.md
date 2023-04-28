@@ -6,9 +6,9 @@ Empirical example about estimation of multivariate elliptical extreme quantiles 
 - Financial Times Stock Exchange FTSE 100 and
 - Nikkei 225.
 
-We compute returns $Y_t = \log(X_{t+1} / X_t)$ and fit $\mathrm{EGARCH}(1, 1)$ model to returns for each index. Then we use innovations for computing extreme quantile regions for several probabilities $p\in\{1/2000, 1/5000, 1/10000\}$.
+We compute returns $Y_t = \log(X_{t+1} / X_t)$ and fit $\mathrm{EGARCH}(1, 1)$ model to returns for each index. Then we use innovations for computing extreme quantile regions for several probabilities $p\in(1/2000, 1/5000, 1/10000)$.
 
-## Preliminaries
+## Requirements
 
 1. Clone or unzip the repository.
     ```
