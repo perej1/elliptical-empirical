@@ -150,8 +150,8 @@ for (i in seq_along(innovation_comb)) {
           axis.text = element_text(size = 15)) +
     xlab(labels[countries[1]]) + ylab(labels[countries[2]]) +
     scale_linetype_manual(name = NULL,
-                          values = c("low" = "solid", "medium" = "dashed",
-                                     "high" = "dotted"))
+                          values = c("low" = "solid", "medium" = "solid",
+                                     "high" = "solid"))
 
   # Save figure
   filename <- stringr::str_c("figures/",
