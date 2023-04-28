@@ -1,3 +1,4 @@
+# Test assumptions of independence, ellipticity and regular variation
 suppressPackageStartupMessages(library(dplyr))
 
 

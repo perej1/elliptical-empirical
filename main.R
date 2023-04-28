@@ -1,3 +1,4 @@
+# Argument parsing
 library(optparse)
 
 cli::cli_h1("Emprical example starting")

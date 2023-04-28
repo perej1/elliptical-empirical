@@ -1,3 +1,4 @@
+# Compute returns, fit EGARCH(1, 1) models and compute innovations
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(rugarch))
 
