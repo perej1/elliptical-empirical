@@ -35,7 +35,7 @@ Lastly, the script `main.R` is responsible for argument parsing. In order to per
 Rscript main.R
 ```
 
-If you wish to skip some parts you can run something like below.
+If you wish to skip some parts of the empirical example, you can run something like below.
 ```
 Rscript main.R --modify TRUE --test FALSE --analyze TRUE
 ```
