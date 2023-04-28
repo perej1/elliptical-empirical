@@ -3,13 +3,13 @@ suppressPackageStartupMessages(library(dplyr))
 
 #' Compute PE test statistic
 #'
-#' @param r Double vector. Sample from a distribution.
-#' @param eta Double. Free parameter, see (Hüsler and Li 2006) for details.
-#' @param m Integer. Discretization level in integration.
-#' @param k Integer. Number of tail observations.
+#' @param r Double vector representing a sample from a distribution.
+#' @param eta Double, free parameter, see (Hüsler and Li 2006) for details.
+#' @param m Integer, discretization level in integration.
+#' @param k Integer, number of tail observations.
 #'
-#' @return Double. Approximate test statistic.
-compute_test_stat_regvar <- function(r, eta = 0.5, m = 10000, k = 80) {
+#' @return Double representing approximate test statistic.
+compute_test_stat_regvar <- function(r, eta = 0.5, m = 10000, k = 160) {
   n <- length(r)
   t <- seq(0, 1, length.out = m + 1)[-1]
   r <- sort(r, decreasing = FALSE)
@@ -21,10 +21,10 @@ compute_test_stat_regvar <- function(r, eta = 0.5, m = 10000, k = 80) {
 
 #' Simulate observation from asymptotic distribution of the PE test statistic
 #'
-#' @param eta Double. Free parameter, see (Hüsler and Li 2006) for details.
-#' @param m Integer. Discretization level in integration.
+#' @param eta Double, free parameter, see (Hüsler and Li 2006) for details.
+#' @param m Integer, discretization level in integration.
 #'
-#' @return Double. Approximate value for an observation from asymptotic
+#' @return Double, approximate value for an observation from asymptotic
 #'  distribution.
 sim_asymp_test_stat_regvar <- function(eta = 0.5, m = 10000) {
   t <- seq(0, 1, length.out = m + 1)[-1]
@@ -35,16 +35,16 @@ sim_asymp_test_stat_regvar <- function(eta = 0.5, m = 10000) {
 }
 
 
-#' Computer p-value for the PE test
+#' Computer approximate p-value for the PE test
 #'
-#' @param r Double vector. Sample from a distribution.
-#' @param eta Double. Free parameter, see (Hüsler and Li 2006) for details.
-#' @param m Integer. Discretization level in integration.
-#' @param k Integer. Number of tail observations.
-#' @param mm Integer. Sample size from asymptotic distribution.
+#' @param r Double vector representing a sample from a distribution.
+#' @param eta Double, free parameter, see (Hüsler and Li 2006) for details.
+#' @param m Integer, discretization level in integration.
+#' @param k Integer, number of tail observations.
+#' @param mm Integer, sample size from asymptotic distribution.
 #'
-#' @return Double. Approximate p-value for the PE-test.
-test_regvar <- function(r, eta = 0.5, m = 10000, k = 80, mm  = 10000) {
+#' @return Double, approximate p-value for the PE-test.
+test_regvar <- function(r, eta = 0.5, m = 10000, k = 160, mm  = 10000) {
   test_stat <- compute_test_stat_regvar(r, eta, m, k)
   fn <- ecdf(replicate(mm, sim_asymp_test_stat_regvar(eta, m)))
   1 - fn(test_stat)

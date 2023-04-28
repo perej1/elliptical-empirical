@@ -2,23 +2,23 @@ suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(rugarch))
 
 
-#' Compute Innovations corresponding to the Garch model
+#' Compute innovations corresponding to the Garch model
 #'
-#' @param fit Fitted GARCH model.
-#' @param x Data as a double vector.
+#' @param fit Fitted GARCH model of class uGARCHfit.
+#' @param x Double vector of raw returns.
 #'
-#' @return Double vector of innovations
+#' @return Double vector of innovations.
 get_innovations <- function(fit, x) {
   as.double((x - coef(fit)["mu"]) / sigma(fit))
 }
 
 
-#' Compute one step predictions for the GARCH model
+#' Compute predicted returns
 #'
-#' @param fit Fitted GARCH model.
-#' @param x Data as a double vector.
+#' @param fit Fitted GARCH model of class uGARCHfit.
+#' @param x Double vector of innovations.
 #'
-#' @return Double vector of predictions.
+#' @return Double vector of predicted returns.
 get_predictions <- function(fit, x) {
   sigma_pred <- as.double(sigma(ugarchforecast(fit, n.ahead = 1)))
   as.double(x * sigma_pred + coef(fit)["mu"])

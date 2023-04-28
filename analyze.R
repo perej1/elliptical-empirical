@@ -4,8 +4,8 @@ library(ggplot2)
 
 #' Generate m equally spaced points from a circle
 #'
-#' @param m Integer. Number of points.
-#' @param d Integer. Dimensions of the ball.
+#' @param m Integer, number of points.
+#' @param d Integer, dimensions of the ball.
 #'
 #' @return Double matrix of points, one row represents one point.
 get_ball_mesh <- function(m, d) {
@@ -48,19 +48,23 @@ sqrtmat <- function(sigma) {
 
 #' Estimate elliptical extreme quantile region
 #'
-#' Consistent for heavy-tailed elliptical distributions under some other
+#' Consistent for heavy-tailed elliptical distributions under some
 #' technical assumptions.
 #'
 #' @param data Double matrix of observations, each row represents one
 #'   observation.
 #' @param mu_est Double vector, estimate of the location.
 #' @param sigma_est Double matrix, estimate of the scatter.
-#' @param p Double, probability in quantile region.
+#' @param p Double, probability corresponding to the quantile region.
 #' @param k Integer, threshold for the sample from the tail.
 #' @param m Integer, number of points to return.
 #'
-#' @return Double matrix, m points from the boundary of the quantile region.
-elliptical_extreme_qregion <- function(data, mu_est, sigma_est, p, k, m, d) {
+#' @return List of length 2. First element is a double matrix giving m points
+#'   from the boundary of the quantile region. One row represents one point.
+#'   The second element is a double, representing (1 - p)-quantile of the
+#'   generating variate.
+elliptical_extreme_qregion <- function(data, mu_est, sigma_est, p, k, m) {
+  d <- ncol(data)
   n <- nrow(data)
   w <- get_ball_mesh(m, d)
 
@@ -102,7 +106,6 @@ prediction_comb <- stock %>%
 # Compute predicted bivariate extreme quantile regions
 m <- 1000
 k <- 160
-d <- 2
 p <- c(low = 1 / 2000, medium = 1 / 5000, high = 1 / 10000)
 labels <- c(us = "S&P 500", uk = "FTSE 100", jpn = "Nikkei 225")
 
@@ -122,7 +125,7 @@ for (i in seq_along(innovation_comb)) {
   estimates <- purrr::map(p, ~ elliptical_extreme_qregion(innovation_comb[[i]],
                                                           mcd_est$center,
                                                           mcd_est$cov,
-                                                          ., k, m, d)$data) %>%
+                                                          ., k, m)$data) %>%
     purrr::map(~ sweep(. %*% t(sigma), 2, offset, "+")) %>%
     do.call(rbind, .) %>%
     as_tibble(.name_repair = "universal") %>%
@@ -168,13 +171,13 @@ outliers <- purrr::map_dbl(p,
                                                         sigma_est = mcd_est$cov,
                                                         .,
                                                         k = k,
-                                                        m = 10000,
-                                                        d = 3)$r_hat) %>%
+                                                        m = 10000)$r_hat) %>%
   purrr::map(~ mahalanobis(innovations,
                            mcd_est$center,
                            mcd_est$cov) >= .^2) %>%
   purrr::map(~ stock$date[.])
 
+# Print results of outlier detection
 cli::cli_h3("Outliers for different levels of p when k = {k}")
 cli::cli_alert_info("p = {p['low']}: {length(outliers$low)} outlier{?s} found, {outliers$low}")
 cli::cli_alert_info("p = {p['medium']}: {length(outliers$medium)} outlier{?s} found, {outliers$medium}")
