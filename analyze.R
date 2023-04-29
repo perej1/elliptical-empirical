@@ -166,20 +166,34 @@ innovations <- stock %>%
 
 mcd_est <- robustbase::covMcd(innovations, alpha = 0.5)
 
-outliers <- purrr::map_dbl(p,
-                           ~ elliptical_extreme_qregion(innovations,
-                                                        mu_est = mcd_est$center,
-                                                        sigma_est = mcd_est$cov,
-                                                        .,
-                                                        k = k,
-                                                        m = 10000)$r_hat) %>%
-  purrr::map(~ mahalanobis(innovations,
-                           mcd_est$center,
-                           mcd_est$cov) >= .^2) %>%
+r_hats <- purrr::map_dbl(p,
+                         ~ elliptical_extreme_qregion(innovations,
+                                                      mu_est = mcd_est$center,
+                                                      sigma_est = mcd_est$cov,
+                                                      .,
+                                                      k = k,
+                                                      m = 10000)$r_hat)
+
+outliers <- purrr::map(r_hats,
+                       ~ mahalanobis(innovations,
+                                     mcd_est$center,
+                                     mcd_est$cov) >= .^2) %>%
   purrr::map(~ stock$date[.])
 
 # Print results of outlier detection
-cli::cli_h3("Outliers for different levels of p when k = {k}")
-cli::cli_alert_info("p = {p['low']}: {length(outliers$low)} outlier{?s} found, {outliers$low}")
-cli::cli_alert_info("p = {p['medium']}: {length(outliers$medium)} outlier{?s} found, {outliers$medium}")
-cli::cli_alert_info("p = {p['high']}: {length(outliers$high)} outlier{?s} found, {outliers$high}")
+cli::cli_alert_info("Estimates of the location and scatter:")
+mcd_est$center
+mcd_est$cov
+
+cli::cli_h3("Results of outlier detection for different levels of p when k = {k}")
+cli::cli_alert_info("p = {p['low']}:
+                    \t - r_hat = {r_hats['low']}
+                    \t - {length(outliers$low)} outlier{?s} found, {outliers$low}")
+
+cli::cli_alert_info("p = {p['medium']}:
+                    \t - r_hat = {r_hats['medium']}
+                    \t - {length(outliers$medium)} outlier{?s} found, {outliers$medium}")
+
+cli::cli_alert_info("p = {p['high']}:
+                    \t - r_hat = {r_hats['high']}
+                    \t - {length(outliers$high)} outlier{?s} found, {outliers$high}")
