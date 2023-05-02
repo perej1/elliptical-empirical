@@ -1,12 +1,12 @@
 # elliptical-empirical
 
-Empirical example about estimation of multivariate elliptical extreme quantiles in a finacial context. Data consists of three time series of market price indices from 2.7.2001 to 29.6.2007:
+Empirical example about estimation of multivariate elliptical extreme quantile regions in a financial context. Data consists of three time series of market price indices from 2.7.2001 to 29.6.2007:
 
 - Standard and Poors S&P 500,
 - Financial Times Stock Exchange FTSE 100 and
 - Nikkei 225.
 
-We compute returns $Y_t = \log(X_{t+1} / X_t)$ and fit $\mathrm{EGARCH}(1, 1)$ model to returns for each index. Then we use innovations for computing extreme quantile regions for several probabilities $p\in(1/2000, 1/5000, 1/10000)$.
+We compute returns $Y_t = \log(X_{t+1} / X_t)$ and fit $\mathrm{EGARCH}(1, 1)$ model to time series of returns for each index. Then we use innovations for computing extreme quantile regions for several probabilities $p\in(1/2000, 1/5000, 1/10000)$.
 
 ## Requirements
 
