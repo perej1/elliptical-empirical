@@ -12,7 +12,7 @@ We compute returns $Y_t = \log(X_{t+1} / X_t)$ and fit $\mathrm{EGARCH}(1, 1)$ m
 
 1. Clone or unzip the repository.
     ```
-    git clone git@github.com:perej1/elliptical-sim.git
+    git clone https://github.com/perej1/elliptical-empirical.git
     ```
 
 2. Install required packages by running the following R command in the project's root folder (R package `renv` has to be installed).
