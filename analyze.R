@@ -3,29 +3,48 @@ suppressPackageStartupMessages(library(dplyr))
 library(ggplot2)
 
 
-#' Generate m equally spaced points from a circle
+#' Convert a spherical coordinate to a Cartesian coordinate
 #'
-#' @param m Integer, number of points.
-#' @param d Integer, dimensions of the ball.
+#' @param radius Double, radius of the point.
+#' @param theta Double vector, d - 1 angular coordinates.
 #'
-#' @return Double matrix of points, one row represents one point.
-get_ball_mesh <- function(m, d) {
-  if (d == 2) {
-    w <- seq(0, 2 * pi, length.out = m)
-    cbind(cos(w), sin(w))
-  } else if (d == 3) {
-    mm <- ceiling(sqrt(m))
-    w <- seq(0, 2 * pi, length.out = mm)
-    v <- seq(0, pi, length.out = mm)
-    x <- purrr::map(w, ~ sin(v) * cos(.)) %>%
-      purrr::list_c()
-    y <- purrr::map(w, ~ sin(v) * sin(.)) %>%
-      purrr::list_c()
-    z <- rep(cos(v), mm)
-    cbind(x, y, z)
-  } else {
-    rlang::abort("Dimensions `d` must be equal to two or three.")
+#' @return Double vector, d coordinates giving the location of the point in
+#'   space.
+spherical_to_cartesian <- function(radius, theta) {
+  d <- length(theta) + 1
+  cartesian <- rep(NA, d)
+  cartesian[1] <- cos(theta[1])
+  cartesian[d] <- prod(sin(theta))
+  
+  if (d > 2) {
+    for (i in 2:(d - 1)) {
+      cartesian[i] <- prod(sin(theta[1:(i - 1)])) * cos(theta[i])
+    }
   }
+  radius * cartesian
+}
+
+
+#' Generate m points from a (d - 1)-sphere
+#'
+#' @param d Integer, dimension of the ball, must be equal to or greater than 2.
+#' @param m_angle Integer, number of points to return.
+#'
+#' @return List of two double matrices, the first gives the ball in spherical
+#'   and the second in Cartesian coordinates. One row represents one point.
+get_ball_mesh <- function(d, m_angle) {
+  m <- ceiling(m_angle^(1 / (d - 1)))
+  angle_list <- vector("list", d - 1)
+  angle_list[[d - 1]] <- seq(0, 2 * pi, length.out = m)
+  if (d > 2) {
+    for (i in 1:(d - 2)) {
+      angle_list[[i]] <- seq(0, pi, length.out = m)
+    }
+  }
+  spherical <- as.matrix(expand.grid(angle_list))
+  list(spherical = spherical,
+       cartesian = t(apply(spherical, 1, spherical_to_cartesian, r = 1)),
+       m_effective = nrow(spherical))
 }
 
 
@@ -49,39 +68,37 @@ sqrtmat <- function(sigma) {
 
 #' Estimate elliptical extreme quantile region
 #'
-#' Consistent for heavy-tailed elliptical distributions under some
-#' technical assumptions.
+#' Consistent for heavy-tailed elliptical distributions under some technical
+#' assumptions.
 #'
 #' @param data Double matrix of observations, each row represents one
 #'   observation.
 #' @param mu_est Double vector, estimate of the location.
 #' @param sigma_est Double matrix, estimate of the scatter.
-#' @param p Double, probability corresponding to the quantile region.
+#' @param p Double, probability in quantile region.
 #' @param k Integer, threshold for the sample from the tail.
-#' @param m Integer, number of points to return.
+#' @param m_angle Integer, number of points to return.
 #'
-#' @return List of length 2. First element is a double matrix giving m points
-#'   from the boundary of the quantile region. One row represents one point.
-#'   The second element is a double, representing (1 - p)-quantile of the
-#'   generating variate.
-elliptical_extreme_qregion <- function(data, mu_est, sigma_est, p, k, m) {
-  d <- ncol(data)
+#' @return Double matrix, m_angle points from the boundary of the quantile
+#'   region.
+elliptical_extreme_qregion <- function(data, mu_est, sigma_est, p, k, m_angle) {
   n <- nrow(data)
-  w <- get_ball_mesh(m, d)
-
+  d <- ncol(data)
+  w <- get_ball_mesh(d, m_angle)$cartesian
+  
   # Center data
   data <- sweep(data, 2, mu_est, "-")
-
+  
   # Approximate generating variate
   radius <- sqrt(stats::mahalanobis(data, FALSE, sigma_est, inverted = FALSE))
   radius_sort <- sort(radius, decreasing = FALSE)
-
+  
   # Estimate extreme value index
   gamma_est <- mean((log(radius_sort[(n - k):n]) - log(radius_sort[n - k]))[-1])
-
+  
   # Estimate extreme quantile of generating variate
   r_hat <- radius_sort[n - k] * (k / (n * p))^gamma_est
-
+  
   # Estimate extreme quantile region
   lambda <- sqrtmat(r_hat^2 * sigma_est)
   data <- sweep(w %*% t(lambda), 2, mu_est, "+")
@@ -156,7 +173,7 @@ for (i in seq_along(innovation_comb)) {
   # Save figure
   filename <- stringr::str_c("figures/",
                              stringr::str_c(countries, collapse = "_"),
-                             ".jpg")
+                             "_estimate", ".jpg")
   ggsave(filename, plot = g, width = 7, height = 7, dpi = 1000)
 }
 
