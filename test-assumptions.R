@@ -1,5 +1,6 @@
 # Test assumptions of independence, ellipticity and regular variation
 suppressPackageStartupMessages(library(dplyr))
+library(ggplot2)
 
 
 #' Compute PE test statistic
@@ -54,7 +55,11 @@ test_regvar <- function(r, eta = 0.5, m = 10000, k = 160, mm  = 10000) {
 
 # Read data
 stock <- readr::read_csv("data/stock-price-mod.csv", col_names = TRUE,
-                  col_types = readr::cols())
+                         col_types = readr::cols())
+
+innovations <- stock %>%
+  select(ends_with("innovation")) %>%
+  rename_with(~ gsub("_innovation", "", .))
 
 # Ljung-Box test for returns
 box_test_return <- stock %>%
@@ -65,8 +70,7 @@ box_test_return <- stock %>%
   rename(us = us_return, uk = uk_return, jpn = jpn_return)
 
 # Ljung-Box test for innovations
-box_test_innovation <- stock %>%
-  select(ends_with("innovation")) %>%
+box_test_innovation <- innovations %>%
   purrr::map(~ Box.test(., lag = 20, type = "Ljung-Box")) %>%
   purrr::map(~ broom::glance(.)$p.value) %>%
   as_tibble() %>%
@@ -76,9 +80,28 @@ box_test_innovation <- stock %>%
 box_test <- bind_rows(box_test_return, box_test_innovation) %>%
   mutate(type = c("return", "innovation"))
 
+# Histograms of marginals of innovations
+for (country in c("us", "uk", "jpn")) {
+  g <- ggplot(innovations, aes(x = !!ggplot2::sym(country))) +
+    geom_histogram(bins = 30)
+  ggsave(stringr::str_c("figures/", country, "_hist", ".jpg"), g, width = 7,
+         height = 7, dpi = 1000)
+}
+
+# QQ-plots
+innovations_comb <- innovations %>%
+  combn(2, simplify = FALSE)
+for (data in innovations_comb) {
+  qq_data <- as_tibble(qqplot(data[[1]], data[[2]], plot.it = FALSE))
+  g <- ggplot(qq_data, aes(x = x, y = y)) +
+    geom_point() +
+    xlab(names(data)[1]) + ylab(names(data)[2])
+  ggsave(stringr::str_c("figures/", stringr::str_c(names(data), collapse = "_"),
+                        "_qq", ".jpg"), g, width = 7, height = 7, dpi = 1000)
+}
+
 # Test for ellipticity (Huffer and Park 2007)
-ellipticity_test <- stock %>%
-  select(contains("innovation")) %>%
+ellipticity_test <- innovations %>%
   as.matrix() %>%
   ellipticalsymmetry::HufferPark(c = 3, R = 1000, sector = "orthants",
                                  nJobs = -1) %>%
@@ -86,13 +109,10 @@ ellipticity_test <- stock %>%
   pull(p.value)
 
 # Test regular variation of the estimated generating variate
-sigma <- stock %>%
-  select(ends_with("innovation")) %>%
-  robustbase::covMcd(alpha = 0.5)
+sigma <- robustbase::covMcd(innovations, alpha = 0.5)
 
-reg_test <- stock %>%
-  select(ends_with("innovation")) %>%
-  as.matrix %>%
+reg_test <- innovations %>%
+  as.matrix() %>%
   stats::mahalanobis(center = sigma$center, cov = sigma$cov) %>%
   sqrt() %>%
   test_regvar(eta = 0.5, m = 10000, k = 80, mm = 10000)

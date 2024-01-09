@@ -9,6 +9,14 @@
     ]
   },
   "Packages": {
+    "DBI": {
+      "Package": "DBI",
+      "Version": "1.2.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "3e0051431dff9acfe66c23765e55c556",
+      "Requirements": []
+    },
     "DEoptimR": {
       "Package": "DEoptimR",
       "Version": "1.0-11",
@@ -51,6 +59,7 @@
       "Repository": "CRAN",
       "Hash": "0fd219b1f766ad2e9c1ffad2d681404a",
       "Requirements": [
+        "mvtnorm",
         "survey"
       ]
     },
@@ -61,7 +70,8 @@
       "Repository": "CRAN",
       "Hash": "fa63cf34e2827bdd580893d7b8b10b02",
       "Requirements": [
-        "ICS"
+        "ICS",
+        "mvtnorm"
       ]
     },
     "KernSmooth": {
@@ -451,6 +461,9 @@
         "kernlab",
         "mclust",
         "mgcv",
+        "multicool",
+        "mvtnorm",
+        "plot3D",
         "pracma"
       ]
     },
@@ -518,13 +531,33 @@
         "Rcpp"
       ]
     },
+    "misc3d": {
+      "Package": "misc3d",
+      "Version": "0.9-1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "c075218a4fc802bab009a7f5e01bb686",
+      "Requirements": []
+    },
     "mitools": {
       "Package": "mitools",
       "Version": "2.4",
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "a4b659bd0528226724d55034f11ed7cb",
-      "Requirements": []
+      "Requirements": [
+        "DBI"
+      ]
+    },
+    "multicool": {
+      "Package": "multicool",
+      "Version": "1.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "70ac26dd3561ea535a6e6c755c35939b",
+      "Requirements": [
+        "Rcpp"
+      ]
     },
     "munsell": {
       "Package": "munsell",
@@ -535,6 +568,14 @@
       "Requirements": [
         "colorspace"
       ]
+    },
+    "mvtnorm": {
+      "Package": "mvtnorm",
+      "Version": "1.2-4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "17e96668f44a28aef0981d9e17c49b59",
+      "Requirements": []
     },
     "nlme": {
       "Package": "nlme",
@@ -589,6 +630,16 @@
       "Repository": "CRAN",
       "Hash": "01f28d4278f15c76cddbea05899c5d6f",
       "Requirements": []
+    },
+    "plot3D": {
+      "Package": "plot3D",
+      "Version": "1.4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "092e8bfd36dc747184cb56e4686f0cd3",
+      "Requirements": [
+        "misc3d"
+      ]
     },
     "pracma": {
       "Package": "pracma",
@@ -660,10 +711,10 @@
     },
     "rlang": {
       "Package": "rlang",
-      "Version": "1.0.6",
+      "Version": "1.1.2",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "4ed1f8336c8d52c3e750adcdc57228a7",
+      "Hash": "50a6dbdc522936ca35afc5e2082ea91b",
       "Requirements": []
     },
     "rngtools": {
