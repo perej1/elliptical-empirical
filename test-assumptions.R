@@ -3,6 +3,19 @@ suppressPackageStartupMessages(library(dplyr))
 library(ggplot2)
 
 
+#' Compute value of the Hill estimator
+#'
+#' @param data Double vector of data.
+#' @param k Integer, number of tail observations.
+#'
+#' @return Double, estimate for the extreme value index
+hill <- function(data, k) {
+  n <- length(data)
+  data <- sort(data, decreasing = FALSE)
+  mean((log(data[(n - k):n]) - log(data[n - k]))[-1])
+}
+
+
 #' Compute PE test statistic
 #'
 #' @param r Double vector representing a sample from a distribution.
@@ -67,14 +80,13 @@ box_test_return <- stock %>%
   purrr::map(~ Box.test(., lag = 20, type = "Ljung-Box")) %>%
   purrr::map(~ broom::glance(.)$p.value) %>%
   as_tibble() %>%
-  rename(us = us_return, uk = uk_return, jpn = jpn_return)
+  rename_with(~ gsub("_return", "", .))
 
 # Ljung-Box test for innovations
 box_test_innovation <- innovations %>%
   purrr::map(~ Box.test(., lag = 20, type = "Ljung-Box")) %>%
   purrr::map(~ broom::glance(.)$p.value) %>%
-  as_tibble() %>%
-  rename(us = us_innovation, uk = uk_innovation, jpn = jpn_innovation)
+  as_tibble()
 
 # Combine results for Ljung-Box test
 box_test <- bind_rows(box_test_return, box_test_innovation) %>%
@@ -82,22 +94,30 @@ box_test <- bind_rows(box_test_return, box_test_innovation) %>%
 
 # Histograms of marginals of innovations
 for (country in c("us", "uk", "jpn")) {
-  g <- ggplot(innovations, aes(x = !!ggplot2::sym(country))) +
+  ggplot(innovations, aes(x = !!ggplot2::sym(country))) +
     geom_histogram(bins = 30)
-  ggsave(stringr::str_c("figures/", country, "_hist", ".jpg"), g, width = 7,
+  ggsave(stringr::str_c("figures/", country, "_hist", ".jpg"), width = 7,
          height = 7, dpi = 1000)
 }
 
-# QQ-plots
+# QQ-plots and scatter plots
 innovations_comb <- innovations %>%
   combn(2, simplify = FALSE)
 for (data in innovations_comb) {
+  countries <- names(data)
+  names(data) <- c("x", "y")
   qq_data <- as_tibble(qqplot(data[[1]], data[[2]], plot.it = FALSE))
-  g <- ggplot(qq_data, aes(x = x, y = y)) +
+  ggplot(qq_data, aes(x = x, y = y)) +
     geom_point() +
-    xlab(names(data)[1]) + ylab(names(data)[2])
-  ggsave(stringr::str_c("figures/", stringr::str_c(names(data), collapse = "_"),
-                        "_qq", ".jpg"), g, width = 7, height = 7, dpi = 1000)
+    xlab(countries[1]) + ylab(countries[2])
+  ggsave(stringr::str_c("figures/", stringr::str_c(countries, collapse = "_"),
+                        "_qq", ".jpg"), width = 7, height = 7, dpi = 1000)
+  
+  ggplot(data, aes(x = x, y = y)) +
+    geom_point() +
+    xlab(countries[1]) + ylab(countries[2])
+  ggsave(stringr::str_c("figures/", stringr::str_c(countries, collapse = "_"),
+                        "_scatter", ".jpg"), width = 7, height = 7, dpi = 1000)
 }
 
 # Test for ellipticity (Huffer and Park 2007)
@@ -107,6 +127,14 @@ ellipticity_test <- innovations %>%
                                  nJobs = -1) %>%
   broom::glance() %>%
   pull(p.value)
+
+# Compute extreme value indices for the tails
+gamma_left <- purrr::map(-innovations, ~ hill(., 80))
+gamma_right <- purrr::map(innovations, ~ hill(., 80))
+
+gamma <- bind_rows(gamma_left, gamma_right) %>%
+  mutate(type = c("left", "right"))
+
 
 # Test regular variation of the estimated generating variate
 sigma <- robustbase::covMcd(innovations, alpha = 0.5)
@@ -127,6 +155,10 @@ box_test
 cli::cli_h3("P-values for the tests of ellipticity and regular variation")
 test_res
 
-# Save p-values
+cli::cli_h3("Extreme value indices")
+gamma
+
+# Save diagnostics
 readr::write_csv(box_test, "data/box_test.csv")
 readr::write_csv(test_res, "data/test_res.csv")
+readr::write_csv(gamma, "data/gamma.csv")
