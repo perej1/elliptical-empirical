@@ -102,7 +102,7 @@ elliptical_extreme_qregion <- function(data, mu_est, sigma_est, p, k, m_angle) {
   # Estimate extreme quantile region
   lambda <- sqrtmat(r_hat^2 * sigma_est)
   data <- sweep(w %*% t(lambda), 2, mu_est, "+")
-  list(data = data, r_hat = r_hat)
+  list(data = data, r_hat = r_hat, gamma_est = gamma_est)
 }
 
 
@@ -126,10 +126,14 @@ m <- 1000
 k <- 160
 p <- c(low = 1 / 2000, medium = 1 / 5000, high = 1 / 10000)
 labels <- c(us = "S&P 500", uk = "FTSE 100", jpn = "Nikkei 225")
+mcd_est <- list()
+gamma <- c()
 
 for (i in seq_along(innovation_comb)) {
   countries <- c(stringr::str_split(names(innovation_comb[[i]]), "_",
                            simplify = TRUE))[1:2]
+  country_comb <- stringr::str_c(countries, collapse = "_")
+  
   sigma <- parameters %>%
     filter(country %in% countries) %>%
     pull(sigma_pred) %>%
@@ -139,21 +143,25 @@ for (i in seq_along(innovation_comb)) {
     filter(country %in% countries) %>%
     pull(offset)
 
-  mcd_est <- robustbase::covMcd(innovation_comb[[i]], alpha = 0.5)
+  mcd_est[[country_comb]] <- robustbase::covMcd(innovation_comb[[i]],
+                                                alpha = 0.5)
   estimates <- purrr::map(p, ~ elliptical_extreme_qregion(innovation_comb[[i]],
-                                                          mcd_est$center,
-                                                          mcd_est$cov,
-                                                          ., k, m)$data) %>%
+                                                          mcd_est[[i]]$center,
+                                                          mcd_est[[i]]$cov,
+                                                          ., k, m))
+  gamma[country_comb] <- estimates$low$gamma_est
+  
+  estimates_pred <- purrr::map(names(p), ~ estimates[[.]]$data) %>%
     purrr::map(~ sweep(. %*% t(sigma), 2, offset, "+")) %>%
     do.call(rbind, .) %>%
     as_tibble(.name_repair = "universal") %>%
     mutate(group = rep(c("low", "medium", "high"), each = m)) %>%
     rename(x = `...1`, y = `...2`)
-
+  
   colnames(prediction_comb[[i]]) <- c("x", "y")
   g <- ggplot(prediction_comb[[i]], aes(x = x, y = y)) +
     geom_point() +
-    geom_path(data = estimates,
+    geom_path(data = estimates_pred,
               aes(x = x, y = y, group = group, linetype = group),
               show.legend = FALSE) +
     coord_fixed() + xlim(-0.07, 0.07) + ylim(-0.07, 0.07) +
@@ -171,11 +179,16 @@ for (i in seq_along(innovation_comb)) {
                                      "high" = "solid"))
 
   # Save figure
-  filename <- stringr::str_c("figures/",
-                             stringr::str_c(countries, collapse = "_"),
-                             "_estimate", ".jpg")
+  filename <- stringr::str_c("figures/", country_comb, "_estimate", ".jpg")
   ggsave(filename, plot = g, width = 7, height = 7, dpi = 1000)
 }
+
+# Print estimated location, scatter and extreme value index for all pairs
+cli::cli_h3("Estimates of the extreme value indices")
+gamma
+
+cli::cli_h3("Estimates of the location and scatter")
+mcd_est
 
 # Outlier detection with three dimensional extreme quantile regions
 innovations <- stock %>%
@@ -198,7 +211,7 @@ outliers <- purrr::map(r_hats,
   purrr::map(~ stock$date[.])
 
 # Print results of outlier detection
-cli::cli_alert_info("Estimates of the location and scatter:")
+cli::cli_h3("3D Estimates of the location and scatter:")
 mcd_est$center
 mcd_est$cov
 
