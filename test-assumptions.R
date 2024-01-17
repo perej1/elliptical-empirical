@@ -112,7 +112,7 @@ for (data in innovations_comb) {
     xlab(countries[1]) + ylab(countries[2])
   ggsave(stringr::str_c("figures/", stringr::str_c(countries, collapse = "_"),
                         "_qq", ".jpg"), width = 7, height = 7, dpi = 1000)
-  
+
   ggplot(data, aes(x = x, y = y)) +
     geom_point() +
     xlab(countries[1]) + ylab(countries[2])

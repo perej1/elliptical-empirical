@@ -15,7 +15,7 @@ spherical_to_cartesian <- function(radius, theta) {
   cartesian <- rep(NA, d)
   cartesian[1] <- cos(theta[1])
   cartesian[d] <- prod(sin(theta))
-  
+
   if (d > 2) {
     for (i in 2:(d - 1)) {
       cartesian[i] <- prod(sin(theta[1:(i - 1)])) * cos(theta[i])
@@ -85,20 +85,20 @@ elliptical_extreme_qregion <- function(data, mu_est, sigma_est, p, k, m_angle) {
   n <- nrow(data)
   d <- ncol(data)
   w <- get_ball_mesh(d, m_angle)$cartesian
-  
+
   # Center data
   data <- sweep(data, 2, mu_est, "-")
-  
+
   # Approximate generating variate
   radius <- sqrt(stats::mahalanobis(data, FALSE, sigma_est, inverted = FALSE))
   radius_sort <- sort(radius, decreasing = FALSE)
-  
+
   # Estimate extreme value index
   gamma_est <- mean((log(radius_sort[(n - k):n]) - log(radius_sort[n - k]))[-1])
-  
+
   # Estimate extreme quantile of generating variate
   r_hat <- radius_sort[n - k] * (k / (n * p))^gamma_est
-  
+
   # Estimate extreme quantile region
   lambda <- sqrtmat(r_hat^2 * sigma_est)
   data <- sweep(w %*% t(lambda), 2, mu_est, "+")
@@ -131,9 +131,9 @@ gamma <- c()
 
 for (i in seq_along(innovation_comb)) {
   countries <- c(stringr::str_split(names(innovation_comb[[i]]), "_",
-                           simplify = TRUE))[1:2]
+                                    simplify = TRUE))[1:2]
   country_comb <- stringr::str_c(countries, collapse = "_")
-  
+
   sigma <- parameters %>%
     filter(country %in% countries) %>%
     pull(sigma_pred) %>%
@@ -150,14 +150,14 @@ for (i in seq_along(innovation_comb)) {
                                                           mcd_est[[i]]$cov,
                                                           ., k, m))
   gamma[country_comb] <- estimates$low$gamma_est
-  
+
   estimates_pred <- purrr::map(names(p), ~ estimates[[.]]$data) %>%
     purrr::map(~ sweep(. %*% t(sigma), 2, offset, "+")) %>%
     do.call(rbind, .) %>%
     as_tibble(.name_repair = "universal") %>%
     mutate(group = rep(c("low", "medium", "high"), each = m)) %>%
     rename(x = `...1`, y = `...2`)
-  
+
   colnames(prediction_comb[[i]]) <- c("x", "y")
   g <- ggplot(prediction_comb[[i]], aes(x = x, y = y)) +
     geom_point() +
